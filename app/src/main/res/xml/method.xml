@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 
+    Keyboard (IME) service metadata.
+    
+    Attributes:
+    - settingsActivity: Points to settings activity (will implement in Phase 7)
+    
+    This file is referenced in AndroidManifest.xml by AIKeyboardService.
+    Full implementation in Phase 2.
+-->
+<input-method xmlns:android="http://schemas.android.com/apk/res/android"
+    android:settingsActivity="com.aireplyassistant.presentation.MainActivity" />

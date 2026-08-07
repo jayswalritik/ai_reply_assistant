@@ -1,0 +1,1 @@
+-keep,allowobfuscation,allowshrinking class com.aireplyassistant.presentation.keyboard.KeyboardViewModel

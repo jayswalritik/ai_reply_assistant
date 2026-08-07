@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 
+    Full backup configuration.
+    
+    Ensures settings and app state are backed up while excluding sensitive data.
+-->
+<full-backup-content>
+    <include domain="sharedpref" path="." />
+    <exclude domain="database" path="messages" />
+</full-backup-content>

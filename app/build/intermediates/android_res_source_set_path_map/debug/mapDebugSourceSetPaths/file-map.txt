@@ -1,0 +1,7 @@
+com.aireplyassistant.app-updated_navigation_xml-0 D:\Reply Assistant\app\build\generated\updated_navigation_xml\debug
+com.aireplyassistant.app-packageDebugResources-1 D:\Reply Assistant\app\build\intermediates\incremental\debug\packageDebugResources\merged.dir
+com.aireplyassistant.app-packageDebugResources-2 D:\Reply Assistant\app\build\intermediates\incremental\debug\packageDebugResources\stripped.dir
+com.aireplyassistant.app-debug-3 D:\Reply Assistant\app\build\intermediates\merged_res\debug\mergeDebugResources
+com.aireplyassistant.app-debug-4 D:\Reply Assistant\app\src\debug\res
+com.aireplyassistant.app-main-5 D:\Reply Assistant\app\src\main\res
+gradleHome-0 C:\Users\hp\.gradle

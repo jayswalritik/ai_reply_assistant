@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="background">#FFFFFF</color>
+    <color name="error">#B3261E</color>
+    <color name="primary">#1F41BB</color>
+    <color name="secondary">#6200EE</color>
+    <color name="surface">#F5F5F5</color>
+    <color name="tertiary">#03DAC6</color>
+    <string name="accessibility_service_name">AI Reply Assistant Service</string>
+    <string name="app_name">AI Reply Assistant</string>
+    <string name="app_version">v1.0.0</string>
+    <string name="keyboard_service_name">AI Reply Assistant Keyboard</string>
+    <style name="Theme.AIReplyAssistant" parent="Theme.Material3.DayNight.NoActionBar">
+    </style>
+</resources>
