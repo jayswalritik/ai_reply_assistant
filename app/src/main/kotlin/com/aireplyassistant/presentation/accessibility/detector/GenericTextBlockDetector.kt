@@ -1,6 +1,7 @@
 package com.aireplyassistant.presentation.accessibility.detector
 
 import android.graphics.Rect
+import android.util.Log
 import android.view.accessibility.AccessibilityNodeInfo
 import com.aireplyassistant.domain.model.MessageBubble
 import javax.inject.Inject
@@ -8,10 +9,12 @@ import javax.inject.Singleton
 
 /**
  * GenericTextBlockDetector - Specialized detector for non-messaging apps (like ChatGPT).
- * Focuses on extracting meaningful text blocks from any view hierarchy or WebView.
+ * Focuses on extracting meaningful text blocks from any view hierarchy, including Compose and WebView.
  */
 @Singleton
 class GenericTextBlockDetector @Inject constructor() {
+
+    private val exclusionKeywords = listOf("Copy", "Regenerate", "Send", "Share", "Like", "Dislike")
 
     /**
      * Detects meaningful text blocks in the given window root.
@@ -24,15 +27,15 @@ class GenericTextBlockDetector @Inject constructor() {
         return textNodes
             .groupBy { it.first.parent?.hashCode() ?: -1 }
             .mapNotNull { (_, nodes) -> mergeNodesIntoBlock(nodes) }
-            .filter { it.text.length > 10 } // Filter out UI noise (buttons, labels)
+            .filter { isValidBlock(it) }
     }
 
     private fun collectTextNodes(node: AccessibilityNodeInfo?, result: MutableList<Pair<AccessibilityNodeInfo, Rect>>) {
         if (node == null || !node.isVisibleToUser) return
 
+        // Capture text from node (including merged Compose semantics)
         val text = node.text?.toString()?.trim() ?: node.contentDescription?.toString()?.trim() ?: ""
         
-        // Include WebView content by checking generic class names or nodes with text
         if (text.isNotEmpty() && node.className != "android.widget.EditText") {
             val bounds = Rect()
             node.getBoundsInScreen(bounds)
@@ -41,6 +44,7 @@ class GenericTextBlockDetector @Inject constructor() {
             }
         }
 
+        // Recurse into children
         for (i in 0 until node.childCount) {
             collectTextNodes(node.getChild(i), result)
         }
@@ -59,14 +63,17 @@ class GenericTextBlockDetector @Inject constructor() {
         nodes.forEach { (_, nodeRect) ->
             if (bounds.isEmpty) bounds.set(nodeRect) else bounds.union(nodeRect)
         }
-        
-        // Add padding for better "wrapping" visuals
-        bounds.inset(-4, -4)
 
         return MessageBubble(
             text = mergedText,
-            isSentByUser = false, // In generic mode, we just care about capturing the text
+            isSentByUser = false,
             bounds = bounds
         )
+    }
+
+    private fun isValidBlock(bubble: MessageBubble): Boolean {
+        if (bubble.text.length < 3) return false
+        val lowercaseText = bubble.text.lowercase()
+        return exclusionKeywords.none { it.lowercase() == lowercaseText }
     }
 }

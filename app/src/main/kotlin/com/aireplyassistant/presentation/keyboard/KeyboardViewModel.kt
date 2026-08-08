@@ -24,6 +24,7 @@ import kotlinx.coroutines.flow.*
 class KeyboardViewModel @Inject constructor(
     private val generateRepliesUseCase: GenerateRepliesUseCase,
     private val accessibilityRepository: AccessibilityRepository,
+    private val chatGptRepository: com.aireplyassistant.domain.repository.ChatGptConversationRepository,
     @ApplicationContext private val context: Context
 ) : ViewModel() {
 
@@ -127,39 +128,39 @@ class KeyboardViewModel @Inject constructor(
     }
 
     private fun handleChatGptFlow(bubbles: List<MessageBubble>) {
-        _isLoadingReplies.value = true // Marker that we are in the flow
+        _isLoadingReplies.value = true
         val transcript = buildTranscript(bubbles)
         val prompt = "Here is our conversation:\n\n$transcript\n\nWrite 5 distinct natural replies I could send next. One per line."
         
-        // 1. Copy to clipboard (Safety backup)
         val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
         clipboard.setPrimaryClip(ClipData.newPlainText("AI Prompt", prompt))
         
-        // 2. Launch with ACTION_SEND to pre-fill prompt if supported
-        val sendIntent = Intent(Intent.ACTION_SEND).apply {
-            type = "text/plain"
-            putExtra(Intent.EXTRA_TEXT, prompt)
-            setPackage("com.openai.chatgpt") // Targeted launch
-            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-        }
-
-        try {
-            Toast.makeText(context, "Prompt copied! Paste it in ChatGPT", Toast.LENGTH_LONG).show()
-            context.startActivity(sendIntent)
-        } catch (e: Exception) {
-            // Fallback: Just open app if ACTION_SEND package not found
-            val launchIntent = context.packageManager.getLaunchIntentForPackage("com.openai.chatgpt")
-            if (launchIntent != null) {
-                launchIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                context.startActivity(launchIntent)
+        viewModelScope.launch {
+            val savedUrl = chatGptRepository.savedConversationUrl.value
+            if (savedUrl != null) {
+                // Reuse existing conversation
+                launchUrl(savedUrl)
+                Toast.makeText(context, "Returning to saved chat. Paste prompt!", Toast.LENGTH_LONG).show()
+                accessibilityRepository.setFloatingIndicatorVisibility(true)
             } else {
-                val browserIntent = Intent(Intent.ACTION_VIEW, Uri.parse("https://chatgpt.com"))
-                browserIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                context.startActivity(browserIntent)
+                // First-time setup
+                launchUrl("https://chatgpt.com")
+                Toast.makeText(context, "Start a chat, send a message, then tap the floating icon to Save", Toast.LENGTH_LONG).show()
+                accessibilityRepository.setSaveChatOverlayVisibility(true)
             }
         }
+    }
 
-        accessibilityRepository.setFloatingIndicatorVisibility(true)
+    private fun launchUrl(url: String) {
+        val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url)).apply {
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            addFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT)
+        }
+        try {
+            context.startActivity(intent)
+        } catch (e: Exception) {
+            Log.e("KeyboardVM", "Failed to launch URL", e)
+        }
     }
 
     private fun buildTranscript(bubbles: List<MessageBubble>): String {
@@ -188,10 +189,18 @@ class KeyboardViewModel @Inject constructor(
     fun onSpace() { _currentText.value += " " }
     fun dismissProviderMenu() { _showProviderMenu.value = false }
 
+    fun resetChatGPT() {
+        viewModelScope.launch {
+            chatGptRepository.clearUrl()
+            Toast.makeText(context, "Saved chat reset!", Toast.LENGTH_SHORT).show()
+        }
+    }
+
     private val _replyToCommit = MutableSharedFlow<String>(extraBufferCapacity = 1)
     val replyToCommit: SharedFlow<String> = _replyToCommit.asSharedFlow()
 
     fun insertReply(reply: String) {
+        Log.d("KeyboardVM", "Emitting reply to commit: ${reply.take(20)}")
         _currentText.value = reply
         _showReplySuggestions.value = false
         _isLoadingReplies.value = false

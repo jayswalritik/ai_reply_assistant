@@ -83,4 +83,15 @@ interface AccessibilityRepository {
      */
     fun setOcrCache(bubbles: List<MessageBubble>)
     val ocrCache: StateFlow<List<MessageBubble>>
+
+    /**
+     * Show/Hide "Save This Chat" overlay for first-time setup.
+     */
+    fun setSaveChatOverlayVisibility(visible: Boolean)
+    val saveChatOverlayRequests: SharedFlow<Boolean>
+
+    /**
+     * Request the Accessibility Service to capture the current browser URL.
+     */
+    suspend fun captureBrowserUrl(): String?
 }

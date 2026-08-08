@@ -2,12 +2,12 @@ package com.aireplyassistant.presentation.accessibility.ocr
 
 import android.graphics.Bitmap
 import android.graphics.Rect
+import android.util.Log
 import com.aireplyassistant.domain.model.MessageBubble
 import com.google.android.gms.tasks.Tasks
 import com.google.mlkit.vision.common.InputImage
 import com.google.mlkit.vision.text.TextRecognition
 import com.google.mlkit.vision.text.latin.TextRecognizerOptions
-import android.util.Log
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import javax.inject.Inject
@@ -15,7 +15,7 @@ import javax.inject.Singleton
 
 /**
  * VisualTextExtractor - Uses Google ML Kit to extract text from a screen bitmap (OCR).
- * Provides "Samsung-like" text extraction for apps like ChatGPT.
+ * Provides "Samsung-like" text extraction with precise coordinate scaling.
  */
 @Singleton
 class VisualTextExtractor @Inject constructor() {
@@ -27,7 +27,8 @@ class VisualTextExtractor @Inject constructor() {
             val scaleX = targetWidth.toFloat() / bitmap.width
             val scaleY = targetHeight.toFloat() / bitmap.height
             
-            Log.d("VisualExtractor", "Analyzing bitmap: ${bitmap.width}x${bitmap.height}, Target: ${targetWidth}x${targetHeight}, Scale: $scaleX, $scaleY")
+            Log.d("VisualExtractor", "Screen: ${targetWidth}x${targetHeight}, Bitmap: ${bitmap.width}x${bitmap.height}, Scale: $scaleX, $scaleY")
+            
             val image = InputImage.fromBitmap(bitmap, 0)
             val result = Tasks.await(recognizer.process(image))
             
@@ -42,9 +43,11 @@ class VisualTextExtractor @Inject constructor() {
                         bounds = scaledRect
                     ))
                 }
-                if (block.lines.size > 2) {
+                
+                // Add individual lines for finer selection in long replies
+                if (block.lines.size > 1) {
                     block.lines.forEach { line ->
-                        if (line.text.length > 5 && line.text != block.text) {
+                        if (line.text.length > 3 && line.text != block.text) {
                             bubbles.add(MessageBubble(
                                 text = line.text,
                                 isSentByUser = false,
@@ -55,7 +58,7 @@ class VisualTextExtractor @Inject constructor() {
                 }
             }
             
-            Log.d("VisualExtractor", "OCR: Extracted ${bubbles.size} potential bubbles")
+            Log.d("VisualExtractor", "OCR: Found ${bubbles.size} bubbles")
             bubbles.distinctBy { it.text }
         } catch (e: Exception) {
             Log.e("VisualExtractor", "OCR failed", e)
@@ -72,8 +75,7 @@ class VisualTextExtractor @Inject constructor() {
             (rect.right * scaleX).toInt(),
             (rect.bottom * scaleY).toInt()
         )
-        // Add a tiny bit of padding to the bounds for better "wrapping" visuals
-        r.inset(-2, -2)
+        r.inset(-2, -2) // Tiny padding for visual wrap
         return r
     }
 }

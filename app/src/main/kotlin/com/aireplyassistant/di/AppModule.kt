@@ -80,4 +80,7 @@ object AppModule {
     @Singleton @Provides fun provideGenerateRepliesUseCase(router: AIRouter): GenerateRepliesUseCase = GenerateRepliesUseCase(router)
 
     @Singleton @Provides fun provideReplyGenerationRepository(gen: GenerateRepliesUseCase): ReplyGenerationRepository = ReplyGenerationRepositoryImpl(gen)
+
+    @Singleton @Provides fun provideChatGptConversationRepository(@ApplicationContext context: Context): com.aireplyassistant.domain.repository.ChatGptConversationRepository =
+        com.aireplyassistant.data.repository.ChatGptConversationRepositoryImpl(context)
 }

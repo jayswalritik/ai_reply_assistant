@@ -47,6 +47,7 @@ class AIKeyboardService : InputMethodService(), LifecycleOwner, ViewModelStoreOw
 
     @Inject lateinit var generateRepliesUseCase: GenerateRepliesUseCase
     @Inject lateinit var accessibilityRepository: AccessibilityRepository
+    @Inject lateinit var chatGptRepository: com.aireplyassistant.domain.repository.ChatGptConversationRepository
 
     private val lifecycleRegistry by lazy { LifecycleRegistry(this) }
     private val store by lazy { ViewModelStore() }
@@ -61,7 +62,7 @@ class AIKeyboardService : InputMethodService(), LifecycleOwner, ViewModelStoreOw
             override fun <T : ViewModel> create(modelClass: Class<T>): T {
                 if (modelClass.isAssignableFrom(KeyboardViewModel::class.java)) {
                     @Suppress("UNCHECKED_CAST")
-                    return KeyboardViewModel(generateRepliesUseCase, accessibilityRepository, applicationContext) as T
+                    return KeyboardViewModel(generateRepliesUseCase, accessibilityRepository, chatGptRepository, applicationContext) as T
                 }
                 return super.create(modelClass)
             }
@@ -170,6 +171,7 @@ class AIKeyboardService : InputMethodService(), LifecycleOwner, ViewModelStoreOw
         
         // Commit pending reply if we just came back from ChatGPT
         pendingReply?.let {
+            Log.d("AIKeyboardService", "Committing pending reply: ${it.take(20)}")
             inputCharacter(it)
             pendingReply = null
         }

@@ -39,9 +39,9 @@ fun OverlaySelectionView(
         if (!isScrollMode) {
             isScanning = true
             
-            // Wait for cache to be populated by service (max 2 seconds)
+            // Wait for cache to be populated by service (max 5 seconds)
             var attempts = 0
-            while (mode == OverlayMode.SINGLE_SELECT && attempts < 20) {
+            while (mode == OverlayMode.SINGLE_SELECT && attempts < 50) {
                 val cached = accessibilityRepository.ocrCache.value
                 if (cached.isNotEmpty()) {
                     Log.d("OverlayView", "OCR: Using cached results")
@@ -124,6 +124,10 @@ fun OverlaySelectionView(
                 Canvas(modifier = Modifier.fillMaxSize()) {
                     allBubbles.forEach { bubble ->
                         val padding = 4.dp.toPx()
+                        
+                        // Debug logging for bounds
+                        Log.d("OverlayView", "Drawing bubble: ${bubble.text.take(20)} at ${bubble.bounds}")
+
                         drawRect(
                             color = if (selectedMessages.any { it.text == bubble.text }) Color.Blue else Color.LightGray.copy(alpha = 0.5f),
                             topLeft = androidx.compose.ui.geometry.Offset(bubble.bounds.left.toFloat() - padding, bubble.bounds.top.toFloat() - padding),

@@ -87,6 +87,9 @@ dependencies {
     // ML Kit - Text Recognition (OCR)
     implementation("com.google.android.gms:play-services-mlkit-text-recognition:19.0.1")
 
+    // Browser - Chrome Custom Tabs
+    implementation("androidx.browser:browser:1.7.0")
+
     // Testing
     testImplementation("junit:junit:4.13.2")
     androidTestImplementation("androidx.test.ext:junit:1.1.5")

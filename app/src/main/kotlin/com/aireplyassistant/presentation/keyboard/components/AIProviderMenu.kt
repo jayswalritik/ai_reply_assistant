@@ -10,6 +10,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -18,6 +19,7 @@ import com.aireplyassistant.domain.model.AIProvider
 @Composable
 fun AIProviderMenu(
     onProviderSelected: (AIProvider) -> Unit,
+    onResetChatGPT: () -> Unit,
     onDismiss: () -> Unit
 ) {
     Surface(
@@ -33,8 +35,13 @@ fun AIProviderMenu(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text("Select AI Provider", fontWeight = FontWeight.Bold, fontSize = 16.sp)
-                IconButton(onClick = onDismiss) {
-                    Text("Close", color = MaterialTheme.colorScheme.primary, fontSize = 12.sp)
+                Row {
+                    TextButton(onClick = onResetChatGPT) {
+                        Text("Reset Chat", color = Color.Red, fontSize = 12.sp)
+                    }
+                    IconButton(onClick = onDismiss) {
+                        Text("Close", color = MaterialTheme.colorScheme.primary, fontSize = 12.sp)
+                    }
                 }
             }
             

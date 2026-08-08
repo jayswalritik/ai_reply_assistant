@@ -37,7 +37,11 @@ class AccessibilityRepositoryImpl @Inject constructor() : AccessibilityRepositor
     private val _ocrCache = MutableStateFlow<List<MessageBubble>>(emptyList())
     override val ocrCache: StateFlow<List<MessageBubble>> = _ocrCache.asStateFlow()
 
+    private val _saveChatOverlayRequests = MutableSharedFlow<Boolean>(extraBufferCapacity = 1)
+    override val saveChatOverlayRequests: SharedFlow<Boolean> = _saveChatOverlayRequests.asSharedFlow()
+
     private var scanBubblesProvider: (suspend (Boolean, Boolean) -> List<MessageBubble>)? = null
+    private var captureUrlProvider: (suspend () -> String?)? = null
 
     override fun showOverlay(mode: OverlayMode) {
         _overlayVisibilityRequests.tryEmit(true to mode)
@@ -47,8 +51,16 @@ class AccessibilityRepositoryImpl @Inject constructor() : AccessibilityRepositor
         return scanBubblesProvider?.invoke(isGeneric, useVisualOcr) ?: emptyList()
     }
 
+    override suspend fun captureBrowserUrl(): String? {
+        return captureUrlProvider?.invoke()
+    }
+
     fun setScanBubblesProvider(provider: suspend (Boolean, Boolean) -> List<MessageBubble>) {
         this.scanBubblesProvider = provider
+    }
+
+    fun setCaptureUrlProvider(provider: suspend () -> String?) {
+        this.captureUrlProvider = provider
     }
 
     override fun confirmSelection(selectedBubbles: List<MessageBubble>) {
@@ -78,5 +90,9 @@ class AccessibilityRepositoryImpl @Inject constructor() : AccessibilityRepositor
 
     override fun setFloatingIndicatorVisibility(visible: Boolean) {
         _floatingIndicatorRequests.tryEmit(visible)
+    }
+
+    override fun setSaveChatOverlayVisibility(visible: Boolean) {
+        _saveChatOverlayRequests.tryEmit(visible)
     }
 }

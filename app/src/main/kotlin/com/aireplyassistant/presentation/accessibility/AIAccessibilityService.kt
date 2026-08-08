@@ -43,6 +43,10 @@ class AIAccessibilityService : AccessibilityService() {
                 scanVisibleBubbles(isGeneric)
             }
         }
+
+        (accessibilityRepository as? AccessibilityRepositoryImpl)?.setCaptureUrlProvider {
+            captureBrowserUrl()
+        }
         
         serviceScope.launch {
             accessibilityRepository.overlayVisibilityRequests.collect { (visible, mode) ->
@@ -135,6 +139,25 @@ class AIAccessibilityService : AccessibilityService() {
     }
 
     override fun onInterrupt() {}
+
+    private fun captureBrowserUrl(): String? {
+        val root = rootInActiveWindow ?: return null
+        val candidates = mutableListOf<String>()
+        findUrlInNodes(root, candidates)
+        // Find first candidate that looks like chatgpt.com/c/...
+        return candidates.find { it.contains("chatgpt.com/c/") } ?: candidates.firstOrNull()
+    }
+
+    private fun findUrlInNodes(node: AccessibilityNodeInfo?, result: MutableList<String>) {
+        if (node == null) return
+        val text = node.text?.toString() ?: ""
+        if (text.contains("chatgpt.com")) {
+            result.add(text)
+        }
+        for (i in 0 until node.childCount) {
+            findUrlInNodes(node.getChild(i), result)
+        }
+    }
 
     private fun scanVisibleBubbles(isGeneric: Boolean): List<MessageBubble> {
         val windowList = windows

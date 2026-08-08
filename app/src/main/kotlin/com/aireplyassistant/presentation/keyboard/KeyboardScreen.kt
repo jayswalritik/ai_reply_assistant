@@ -36,6 +36,7 @@ fun KeyboardScreen(
         if (showProviderMenu) {
             AIProviderMenu(
                 onProviderSelected = { viewModel.onProviderSelected(it) },
+                onResetChatGPT = { viewModel.resetChatGPT() },
                 onDismiss = { viewModel.dismissProviderMenu() }
             )
         }
