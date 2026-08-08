@@ -1,11 +1,13 @@
 package com.aireplyassistant.presentation.accessibility
 
 import android.accessibilityservice.AccessibilityService
+import android.content.Context
 import android.content.Intent
 import android.graphics.Rect
 import android.os.Build
 import android.util.Log
 import android.view.Display
+import android.view.WindowManager
 import android.view.accessibility.AccessibilityEvent
 import android.view.accessibility.AccessibilityNodeInfo
 import com.aireplyassistant.data.repository.AccessibilityRepositoryImpl
@@ -95,10 +97,18 @@ class AIAccessibilityService : AccessibilityService() {
 
                             serviceScope.launch {
                                 Log.d("AIAccessibility", "OCR: Processing bitmap...")
+                                
+                                val windowManager = getSystemService(Context.WINDOW_SERVICE) as WindowManager
+                                val screenBounds = windowManager.currentWindowMetrics.bounds
+                                val realWidth = screenBounds.width()
+                                val realHeight = screenBounds.height()
+                                
+                                Log.d("AIAccessibility", "Real screen metrics: ${realWidth}x$realHeight")
+
                                 val bubbles = visualTextExtractor.extractText(
                                     softwareBitmap,
-                                    resources.displayMetrics.widthPixels,
-                                    resources.displayMetrics.heightPixels
+                                    realWidth,
+                                    realHeight
                                 )
                                 if (bubbles.isEmpty()) {
                                     Log.d("AIAccessibility", "OCR found nothing, falling back to tree scan")

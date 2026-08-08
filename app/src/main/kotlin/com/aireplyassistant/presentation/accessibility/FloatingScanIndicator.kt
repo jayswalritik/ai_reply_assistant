@@ -4,18 +4,15 @@ import android.content.Context
 import android.graphics.PixelFormat
 import android.view.Gravity
 import android.view.WindowManager
-import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.ComposeView
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -29,7 +26,15 @@ import androidx.savedstate.SavedStateRegistryOwner
 import androidx.savedstate.setViewTreeSavedStateRegistryOwner
 import com.aireplyassistant.presentation.ui.theme.AIReplyAssistantTheme
 
-class FloatingScanIndicator(private val context: Context, private val onClick: () -> Unit) : LifecycleOwner, SavedStateRegistryOwner {
+/**
+ * FloatingScanIndicator - A reusable floating button overlay.
+ * Used for both "Scan Reply" and "Save This Chat" actions.
+ */
+class FloatingScanIndicator(
+    private val context: Context,
+    private val icon: String,
+    private val onClick: () -> Unit
+) : LifecycleOwner, SavedStateRegistryOwner {
     
     private val lifecycleRegistry = LifecycleRegistry(this)
     private val savedStateRegistryController = SavedStateRegistryController.create(this)
@@ -61,7 +66,7 @@ class FloatingScanIndicator(private val context: Context, private val onClick: (
             setViewTreeSavedStateRegistryOwner(this@FloatingScanIndicator)
             setContent {
                 AIReplyAssistantTheme {
-                    ScanButton(onClick)
+                    ScanButton(icon, onClick)
                 }
             }
         }
@@ -82,18 +87,21 @@ class FloatingScanIndicator(private val context: Context, private val onClick: (
 }
 
 @Composable
-fun ScanButton(onClick: () -> Unit) {
+fun ScanButton(icon: String, onClick: () -> Unit) {
     Surface(
         modifier = Modifier
             .padding(8.dp)
-            .size(56.dp)
-            .clip(CircleShape)
             .clickable { onClick() },
         color = MaterialTheme.colorScheme.primary,
-        tonalElevation = 6.dp
+        tonalElevation = 6.dp,
+        shape = RoundedCornerShape(28.dp)
     ) {
-        Box(contentAlignment = Alignment.Center) {
-            Text("🔍", fontSize = 24.sp)
+        Row(
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.Center
+        ) {
+            Text(icon, fontSize = 20.sp)
         }
     }
 }

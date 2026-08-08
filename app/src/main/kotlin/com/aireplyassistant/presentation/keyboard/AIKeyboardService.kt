@@ -5,7 +5,8 @@ import android.content.Intent
 import android.os.Bundle
 import android.provider.Settings
 import android.util.Log
- import android.view.ContextThemeWrapper
+import android.widget.Toast
+import android.view.ContextThemeWrapper
 import android.view.KeyEvent
 import android.view.MotionEvent
 import android.view.View
@@ -73,6 +74,7 @@ class AIKeyboardService : InputMethodService(), LifecycleOwner, ViewModelStoreOw
     private var viewModel: KeyboardViewModel? = null
     private var currentInputConnection: InputConnection? = null
     private var floatingIndicator: FloatingScanIndicator? = null
+    private var saveChatIndicator: FloatingScanIndicator? = null
     private var pendingReply: String? = null
 
     override fun onCreate() {
@@ -84,9 +86,26 @@ class AIKeyboardService : InputMethodService(), LifecycleOwner, ViewModelStoreOw
         viewModel = ViewModelProvider(this)[KeyboardViewModel::class.java]
         observeVisibilityRequests()
         
-        floatingIndicator = FloatingScanIndicator(this) {
+        floatingIndicator = FloatingScanIndicator(this, "🔍") {
             accessibilityRepository.showOverlay(OverlayMode.SINGLE_SELECT)
             floatingIndicator?.hide()
+        }
+
+        saveChatIndicator = FloatingScanIndicator(this, "💾 Save") {
+            lifecycle.coroutineScope.launch {
+                val url = accessibilityRepository.captureBrowserUrl()
+                if (url != null && url.contains("chatgpt.com/c/")) {
+                    chatGptRepository.saveUrl(url)
+                    Toast.makeText(applicationContext, "Chat saved successfully!", Toast.LENGTH_SHORT).show()
+                    saveChatIndicator?.hide()
+                } else {
+                    Toast.makeText(
+                        applicationContext,
+                        "Could not detect chat URL - make sure you've sent at least one message in ChatGPT, then try again",
+                        Toast.LENGTH_LONG
+                    ).show()
+                }
+            }
         }
     }
 
@@ -102,6 +121,11 @@ class AIKeyboardService : InputMethodService(), LifecycleOwner, ViewModelStoreOw
         lifecycle.coroutineScope.launch {
             accessibilityRepository.floatingIndicatorRequests.collect { visible ->
                 if (visible) floatingIndicator?.show() else floatingIndicator?.hide()
+            }
+        }
+        lifecycle.coroutineScope.launch {
+            accessibilityRepository.saveChatOverlayRequests.collect { visible ->
+                if (visible) saveChatIndicator?.show() else saveChatIndicator?.hide()
             }
         }
         lifecycle.coroutineScope.launch {
@@ -148,12 +172,24 @@ class AIKeyboardService : InputMethodService(), LifecycleOwner, ViewModelStoreOw
                     AIReplyAssistantTheme {
                         KeyboardScreen(
                             viewModel = vm,
-                            onCharacterInput = { vm.onCharacterInput(it); inputCharacter(it) },
-                            onBackspace = { vm.onBackspace(); inputBackspace() },
-                            onSpace = { vm.onSpace(); inputSpace() },
+                            onCharacterInput = { text -> 
+                                vm.onCharacterInput(text)
+                                inputCharacter(text) 
+                            },
+                            onBackspace = { 
+                                vm.onBackspace()
+                                inputBackspace() 
+                            },
+                            onSpace = { 
+                                vm.onSpace()
+                                inputSpace() 
+                            },
                             onEnter = { inputEnter() },
                             onAIButtonPressed = { handleAIButtonPressed() },
-                            onReplySelected = { vm.insertReply(it); insertReply(it) }
+                            onReplySelected = { reply -> 
+                                vm.insertReply(reply)
+                                insertReply(reply) 
+                            }
                         )
                     }
                 }
@@ -196,6 +232,7 @@ class AIKeyboardService : InputMethodService(), LifecycleOwner, ViewModelStoreOw
         lifecycleRegistry.handleLifecycleEvent(Lifecycle.Event.ON_DESTROY)
         store.clear()
         floatingIndicator?.hide()
+        saveChatIndicator?.hide()
     }
 
     override fun onKeyDown(keyCode: Int, event: KeyEvent?): Boolean {

@@ -122,6 +122,16 @@ fun OverlaySelectionView(
                 }
                 
                 Canvas(modifier = Modifier.fillMaxSize()) {
+                    // Debug full-screen border (Bug 3)
+                    if (mode == OverlayMode.SINGLE_SELECT) {
+                        drawRect(
+                            color = Color.Red,
+                            topLeft = androidx.compose.ui.geometry.Offset.Zero,
+                            size = size,
+                            style = Stroke(width = 4.dp.toPx())
+                        )
+                    }
+
                     allBubbles.forEach { bubble ->
                         val padding = 4.dp.toPx()
                         

@@ -1,7 +1,7 @@
 package com.aireplyassistant.presentation.keyboard.components
 
-import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -16,6 +16,11 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.aireplyassistant.domain.model.AIProvider
 
+/**
+ * AIProviderMenu - Bottom sheet menu for selecting AI backend.
+ * Support long-press on ChatGPT to reset its saved conversation.
+ */
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun AIProviderMenu(
     onProviderSelected: (AIProvider) -> Unit,
@@ -35,13 +40,8 @@ fun AIProviderMenu(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text("Select AI Provider", fontWeight = FontWeight.Bold, fontSize = 16.sp)
-                Row {
-                    TextButton(onClick = onResetChatGPT) {
-                        Text("Reset Chat", color = Color.Red, fontSize = 12.sp)
-                    }
-                    IconButton(onClick = onDismiss) {
-                        Text("Close", color = MaterialTheme.colorScheme.primary, fontSize = 12.sp)
-                    }
+                IconButton(onClick = onDismiss) {
+                    Text("Close", color = MaterialTheme.colorScheme.primary, fontSize = 12.sp)
                 }
             }
             
@@ -49,7 +49,13 @@ fun AIProviderMenu(
             
             LazyColumn {
                 items(AIProvider.entries) { provider ->
-                    ProviderItem(provider, onClick = { onProviderSelected(provider) })
+                    ProviderItem(
+                        provider = provider, 
+                        onClick = { onProviderSelected(provider) },
+                        onLongClick = {
+                            if (provider == AIProvider.CHATGPT) onResetChatGPT()
+                        }
+                    )
                 }
             }
             
@@ -58,13 +64,17 @@ fun AIProviderMenu(
     }
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
-fun ProviderItem(provider: AIProvider, onClick: () -> Unit) {
+fun ProviderItem(provider: AIProvider, onClick: () -> Unit, onLongClick: () -> Unit) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
             .padding(vertical = 4.dp)
-            .clickable { onClick() },
+            .combinedClickable(
+                onClick = onClick,
+                onLongClick = onLongClick
+            ),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
     ) {
         Row(
