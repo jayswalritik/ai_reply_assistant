@@ -125,7 +125,11 @@ class AIKeyboardService : InputMethodService(), LifecycleOwner, ViewModelStoreOw
         }
         lifecycle.coroutineScope.launch {
             accessibilityRepository.saveChatOverlayRequests.collect { visible ->
-                if (visible) saveChatIndicator?.show() else saveChatIndicator?.hide()
+                if (visible) {
+                    saveChatIndicator?.show()
+                } else {
+                    saveChatIndicator?.hide()
+                }
             }
         }
         lifecycle.coroutineScope.launch {

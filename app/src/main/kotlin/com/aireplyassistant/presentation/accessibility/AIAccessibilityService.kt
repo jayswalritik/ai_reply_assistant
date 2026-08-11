@@ -107,8 +107,8 @@ class AIAccessibilityService : AccessibilityService() {
 
                                 val bubbles = visualTextExtractor.extractText(
                                     softwareBitmap,
-                                    realWidth,
-                                    realHeight
+                                    screenBounds.width(),
+                                    screenBounds.height()
                                 )
                                 if (bubbles.isEmpty()) {
                                     Log.d("AIAccessibility", "OCR found nothing, falling back to tree scan")
