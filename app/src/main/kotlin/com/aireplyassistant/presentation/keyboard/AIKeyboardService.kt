@@ -134,11 +134,8 @@ class AIKeyboardService : InputMethodService(), LifecycleOwner, ViewModelStoreOw
         }
         lifecycle.coroutineScope.launch {
             vm.replyToCommit.collect { reply ->
-                if (currentInputConnection != null) {
-                    inputCharacter(reply)
-                } else {
-                    pendingReply = reply
-                }
+                pendingReply = reply
+                currentInputConnection?.let { inputCharacter(reply) }
             }
         }
     }

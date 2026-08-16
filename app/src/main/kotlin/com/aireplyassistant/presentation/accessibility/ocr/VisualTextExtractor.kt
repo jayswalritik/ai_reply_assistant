@@ -26,39 +26,53 @@ class VisualTextExtractor @Inject constructor() {
         try {
             val scaleX = targetWidth.toFloat() / bitmap.width
             val scaleY = targetHeight.toFloat() / bitmap.height
-            
-            Log.d("VisualExtractor", "Screen: ${targetWidth}x${targetHeight}, Bitmap: ${bitmap.width}x${bitmap.height}, Scale: $scaleX, $scaleY")
-            
+
             val image = InputImage.fromBitmap(bitmap, 0)
             val result = Tasks.await(recognizer.process(image))
-            
+
+            // Flatten every line from every block - don't trust ML Kit's block/paragraph
+            // grouping, since it can split a single 2-3 line reply into separate blocks.
+            data class ScaledLine(val text: String, val rect: Rect)
+            val allLines = result.textBlocks
+                .flatMap { it.lines }
+                .filter { it.text.isNotBlank() }
+                .map { ScaledLine(it.text, scaleRect(it.boundingBox ?: Rect(), scaleX, scaleY)) }
+                .sortedBy { it.rect.top }
+
+            // Merge lines that are vertically close and horizontally overlapping into one bubble
             val bubbles = mutableListOf<MessageBubble>()
-            
-            result.textBlocks.forEach { block ->
-                val scaledRect = scaleRect(block.boundingBox ?: Rect(), scaleX, scaleY)
-                if (block.text.length > 5) {
-                    bubbles.add(MessageBubble(
-                        text = block.text,
-                        isSentByUser = false,
-                        bounds = scaledRect
-                    ))
+            var currentGroup = mutableListOf<ScaledLine>()
+
+            fun flushGroup() {
+                if (currentGroup.isEmpty()) return
+                val mergedText = currentGroup.joinToString(" ") { it.text }
+                val mergedBounds = Rect(currentGroup.first().rect)
+                currentGroup.forEach { mergedBounds.union(it.rect) }
+                if (mergedText.length > 5) {
+                    bubbles.add(MessageBubble(text = mergedText, isSentByUser = false, bounds = mergedBounds.apply { inset(-4, -4) }))
                 }
-                
-                // Add individual lines for finer selection in long replies
-                if (block.lines.size > 1) {
-                    block.lines.forEach { line ->
-                        if (line.text.length > 3 && line.text != block.text) {
-                            bubbles.add(MessageBubble(
-                                text = line.text,
-                                isSentByUser = false,
-                                bounds = scaleRect(line.boundingBox ?: Rect(), scaleX, scaleY)
-                            ))
-                        }
-                    }
+                currentGroup = mutableListOf()
+            }
+
+            for (line in allLines) {
+                val last = currentGroup.lastOrNull()
+                if (last == null) {
+                    currentGroup.add(line)
+                    continue
+                }
+                val lineHeight = last.rect.height().coerceAtLeast(1)
+                val verticalGap = line.rect.top - last.rect.bottom
+                val horizontalOverlap = line.rect.left < last.rect.right && line.rect.right > last.rect.left
+                if (verticalGap < lineHeight * 0.8 && horizontalOverlap) {
+                    currentGroup.add(line)
+                } else {
+                    flushGroup()
+                    currentGroup.add(line)
                 }
             }
-            
-            Log.d("VisualExtractor", "OCR: Found ${bubbles.size} bubbles")
+            flushGroup()
+
+            Log.d("VisualExtractor", "OCR: Extracted ${bubbles.size} merged bubbles")
             bubbles.distinctBy { it.text }
         } catch (e: Exception) {
             Log.e("VisualExtractor", "OCR failed", e)

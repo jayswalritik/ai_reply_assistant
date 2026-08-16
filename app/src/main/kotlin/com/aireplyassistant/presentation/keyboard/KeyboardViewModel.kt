@@ -60,8 +60,8 @@ class KeyboardViewModel @Inject constructor(
 
     init {
         viewModelScope.launch {
-            accessibilityRepository.selectionResults.collect { bubbles ->
-                handleSelection(bubbles)
+            accessibilityRepository.selectionResults.collect { (bubbles, mode) ->
+                handleSelection(bubbles, mode)
             }
         }
     }
@@ -81,20 +81,25 @@ class KeyboardViewModel @Inject constructor(
         accessibilityRepository.showOverlay(OverlayMode.MULTI_SELECT)
     }
 
-    private fun handleSelection(bubbles: List<MessageBubble>) {
-        if (bubbles.isEmpty()) return
-        
+    private fun handleSelection(bubbles: List<MessageBubble>, mode: OverlayMode) {
+        if (bubbles.isEmpty()) {
+            // Cancelled, or nothing found - fully reset so the NEXT attempt starts clean
+            _isLoadingReplies.value = false
+            accessibilityRepository.setFloatingIndicatorVisibility(false)
+            accessibilityRepository.setActiveProvider(null)
+            return
+        }
+
+        // Mode tells us definitively what this selection is for - no more guessing
+        if (mode == OverlayMode.SINGLE_SELECT) {
+            insertReply(bubbles.first().text)
+            accessibilityRepository.setFloatingIndicatorVisibility(false)
+            return
+        }
+
         val provider = activeProvider.value ?: AIProvider.LOCAL
         if (provider == AIProvider.CHATGPT) {
-            // Check if we are building context or scanning a reply
-            if (bubbles.size == 1 && _isLoadingReplies.value) {
-                // This is a reply scan result
-                insertReply(bubbles.first().text)
-                accessibilityRepository.setFloatingIndicatorVisibility(false)
-            } else {
-                // This is initial context selection
-                handleChatGptFlow(bubbles)
-            }
+            handleChatGptFlow(bubbles)
         } else {
             generateReplies(bubbles, provider)
         }

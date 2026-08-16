@@ -153,23 +153,18 @@ fun OverlaySelectionView(
             modifier = Modifier.align(Alignment.BottomCenter).padding(32.dp).fillMaxWidth(),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            if (mode == OverlayMode.SINGLE_SELECT) {
-                Button(onClick = { isScrollMode = !isScrollMode }) {
-                    Text(if (isScrollMode) "Scan Screen for Reply" else "Switch to Scroll Mode")
-                }
-                Spacer(modifier = Modifier.height(8.dp))
-            }
+
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceEvenly
             ) {
                 Button(onClick = {
-                    accessibilityRepository.cancelSelection()
+                    accessibilityRepository.cancelSelection(mode)   // was: cancelSelection()
                     onDismiss()
                 }) { Text("Cancel") }
                 Button(
                     onClick = {
-                        accessibilityRepository.confirmSelection(selectedMessages.toList())
+                        accessibilityRepository.confirmSelection(selectedMessages.toList(), mode)  // was: confirmSelection(selectedMessages.toList())
                         onDismiss()
                     },
                     enabled = selectedMessages.isNotEmpty()

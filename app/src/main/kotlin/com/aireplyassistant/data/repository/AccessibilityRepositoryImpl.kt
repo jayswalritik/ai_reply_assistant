@@ -19,8 +19,8 @@ class AccessibilityRepositoryImpl @Inject constructor() : AccessibilityRepositor
     private val _overlayVisibilityRequests = MutableSharedFlow<Pair<Boolean, OverlayMode>>(extraBufferCapacity = 1)
     override val overlayVisibilityRequests: SharedFlow<Pair<Boolean, OverlayMode>> = _overlayVisibilityRequests.asSharedFlow()
 
-    private val _selectionResults = MutableSharedFlow<List<MessageBubble>>(extraBufferCapacity = 1)
-    override val selectionResults: SharedFlow<List<MessageBubble>> = _selectionResults.asSharedFlow()
+    private val _selectionResults = MutableSharedFlow<Pair<List<MessageBubble>, OverlayMode>>(extraBufferCapacity = 1)
+    override val selectionResults: SharedFlow<Pair<List<MessageBubble>, OverlayMode>> = _selectionResults.asSharedFlow()
 
     private val _keyboardVisibilityRequests = MutableSharedFlow<Boolean>(extraBufferCapacity = 1)
     override val keyboardVisibilityRequests: SharedFlow<Boolean> = _keyboardVisibilityRequests.asSharedFlow()
@@ -63,13 +63,15 @@ class AccessibilityRepositoryImpl @Inject constructor() : AccessibilityRepositor
         this.captureUrlProvider = provider
     }
 
-    override fun confirmSelection(selectedBubbles: List<MessageBubble>) {
-        _selectionResults.tryEmit(selectedBubbles)
-        _overlayVisibilityRequests.tryEmit(false to OverlayMode.MULTI_SELECT)
+    override fun confirmSelection(selectedBubbles: List<MessageBubble>, mode: OverlayMode) {
+        _selectionResults.tryEmit(selectedBubbles to mode)
+        _overlayVisibilityRequests.tryEmit(false to mode)
     }
 
-    override fun cancelSelection() {
-        _overlayVisibilityRequests.tryEmit(false to OverlayMode.MULTI_SELECT)
+    override fun cancelSelection(mode: OverlayMode) {
+        // Emit empty result so ViewModel can properly reset stuck state (not just close overlay)
+        _selectionResults.tryEmit(emptyList<MessageBubble>() to mode)
+        _overlayVisibilityRequests.tryEmit(false to mode)
     }
 
     override fun setKeyboardVisibility(visible: Boolean) {

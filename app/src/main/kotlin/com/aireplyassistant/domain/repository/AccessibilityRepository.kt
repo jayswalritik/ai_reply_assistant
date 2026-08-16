@@ -30,17 +30,17 @@ interface AccessibilityRepository {
     /**
      * Result of the selection process.
      */
-    fun confirmSelection(selectedBubbles: List<MessageBubble>)
+    fun confirmSelection(selectedBubbles: List<MessageBubble>, mode: OverlayMode)
 
     /**
      * Flow of selected messages.
      */
-    val selectionResults: SharedFlow<List<MessageBubble>>
+    val selectionResults: SharedFlow<Pair<List<MessageBubble>, OverlayMode>>
 
     /**
      * Cancel the selection process.
      */
-    fun cancelSelection()
+    fun cancelSelection(mode: OverlayMode)
 
     /**
      * Request the keyboard to hide or show.

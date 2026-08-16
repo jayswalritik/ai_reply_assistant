@@ -56,9 +56,9 @@ class FloatingScanIndicator(
             WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE,
             PixelFormat.TRANSLUCENT
         ).apply {
-            gravity = Gravity.CENTER_VERTICAL or Gravity.END
-            x = 0
-            y = 0
+            gravity = Gravity.BOTTOM or Gravity.END
+            x = 24
+            y = 150
         }
 
         composeView = ComposeView(context).apply {
