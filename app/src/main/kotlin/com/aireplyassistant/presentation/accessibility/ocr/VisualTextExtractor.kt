@@ -30,49 +30,50 @@ class VisualTextExtractor @Inject constructor() {
             val image = InputImage.fromBitmap(bitmap, 0)
             val result = Tasks.await(recognizer.process(image))
 
-            // Flatten every line from every block - don't trust ML Kit's block/paragraph
-            // grouping, since it can split a single 2-3 line reply into separate blocks.
             data class ScaledLine(val text: String, val rect: Rect)
-            val allLines = result.textBlocks
-                .flatMap { it.lines }
-                .filter { it.text.isNotBlank() }
-                .map { ScaledLine(it.text, scaleRect(it.boundingBox ?: Rect(), scaleX, scaleY)) }
-                .sortedBy { it.rect.top }
-
-            // Merge lines that are vertically close and horizontally overlapping into one bubble
             val bubbles = mutableListOf<MessageBubble>()
-            var currentGroup = mutableListOf<ScaledLine>()
 
-            fun flushGroup() {
-                if (currentGroup.isEmpty()) return
-                val mergedText = currentGroup.joinToString(" ") { it.text }
-                val mergedBounds = Rect(currentGroup.first().rect)
-                currentGroup.forEach { mergedBounds.union(it.rect) }
-                if (mergedText.length > 5) {
-                    bubbles.add(MessageBubble(text = mergedText, isSentByUser = false, bounds = mergedBounds.apply { inset(-4, -4) }))
+            // Hard split at ML Kit block boundaries (usually a real paragraph gap),
+            // but within each block, only split further on an unusually large gap
+            // between lines - that's what marks "next reply option" vs "next wrapped
+            // line of the same reply."
+            result.textBlocks.forEach { block ->
+                val lines = block.lines
+                    .filter { it.text.isNotBlank() }
+                    .map { ScaledLine(it.text, scaleRect(it.boundingBox ?: Rect(), scaleX, scaleY)) }
+                    .sortedBy { it.rect.top }
+
+                var group = mutableListOf<ScaledLine>()
+                val gaps = lines.zipWithNext { a, b -> b.rect.top - a.rect.bottom }
+                val typicalGap = gaps.filter { it > 0 }.average().takeIf { !it.isNaN() } ?: 0.0
+
+                fun flush() {
+                    if (group.isEmpty()) return
+                    val text = group.joinToString(" ") { it.text }
+                    val bounds = Rect(group.first().rect)
+                    group.forEach { bounds.union(it.rect) }
+                    if (text.length > 5) {
+                        bubbles.add(MessageBubble(text = text, isSentByUser = false, bounds = bounds.apply { inset(-4, -4) }))
+                    }
+                    group = mutableListOf()
                 }
-                currentGroup = mutableListOf()
+
+                lines.forEachIndexed { index, line ->
+                    if (group.isEmpty()) {
+                        group.add(line)
+                    } else {
+                        val gap = line.rect.top - group.last().rect.bottom
+                        // Gap more than ~2x the typical line spacing = new reply option
+                        if (typicalGap > 0 && gap > typicalGap * 2.2) {
+                            flush()
+                        }
+                        group.add(line)
+                    }
+                }
+                flush()
             }
 
-            for (line in allLines) {
-                val last = currentGroup.lastOrNull()
-                if (last == null) {
-                    currentGroup.add(line)
-                    continue
-                }
-                val lineHeight = last.rect.height().coerceAtLeast(1)
-                val verticalGap = line.rect.top - last.rect.bottom
-                val horizontalOverlap = line.rect.left < last.rect.right && line.rect.right > last.rect.left
-                if (verticalGap < lineHeight * 0.8 && horizontalOverlap) {
-                    currentGroup.add(line)
-                } else {
-                    flushGroup()
-                    currentGroup.add(line)
-                }
-            }
-            flushGroup()
-
-            Log.d("VisualExtractor", "OCR: Extracted ${bubbles.size} merged bubbles")
+            Log.d("VisualExtractor", "OCR: Extracted ${bubbles.size} bubbles")
             bubbles.distinctBy { it.text }
         } catch (e: Exception) {
             Log.e("VisualExtractor", "OCR failed", e)

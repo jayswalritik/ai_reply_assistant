@@ -232,7 +232,10 @@ class AIAccessibilityService : AccessibilityService() {
     private fun findTextNodesAggressive(node: AccessibilityNodeInfo?, result: MutableList<Pair<AccessibilityNodeInfo, Rect>>) {
         if (node == null) return
         val text = node.text?.toString()?.trim() ?: node.contentDescription?.toString()?.trim() ?: ""
-        if (text.isNotEmpty() && node.className != "android.widget.EditText") {
+        val isActionHint = text.startsWith("Double tap", ignoreCase = true) ||
+                text.contains("tap to open", ignoreCase = true) ||
+                text.contains("tap to view", ignoreCase = true)
+        if (text.isNotEmpty() && !node.isClickable && !isActionHint && node.className != "android.widget.EditText") {
             val bounds = Rect()
             node.getBoundsInScreen(bounds)
             if (bounds.height() > 1 && bounds.width() > 1) {

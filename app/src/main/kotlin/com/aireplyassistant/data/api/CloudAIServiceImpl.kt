@@ -19,7 +19,7 @@ class CloudAIServiceImpl @Inject constructor(
         provider: AIProvider
     ): List<String> {
         val transcript = buildTranscript(message, context)
-        val prompt = "Here is a conversation between my friend and me:\n\n$transcript\n\nWrite 5 distinct natural replies I could send next in a $style style. Provide one reply per line. Do not use labels or numbers."
+        val prompt = "Here is a conversation between my friend and me:\n\n$transcript\n\nWrite distinct natural replies I could send next in a $style style. Provide shorter reply. Do not use labels or numbers."
 
         return when (provider) {
             AIProvider.GEMINI -> callGemini(prompt)
