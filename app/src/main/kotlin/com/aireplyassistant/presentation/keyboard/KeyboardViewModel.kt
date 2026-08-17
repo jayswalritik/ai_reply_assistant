@@ -210,11 +210,17 @@ class KeyboardViewModel @Inject constructor(
         _showReplySuggestions.value = false
         _isLoadingReplies.value = false
         accessibilityRepository.setFloatingIndicatorVisibility(false)
-        
-        // Signal the keyboard service to commit this text
+
+        // Persist to SharedPreferences too - the keyboard process may be killed
+        // while the user is away in ChatGPT, wiping the in-memory flow below.
+        context.getSharedPreferences("pending_reply", Context.MODE_PRIVATE)
+            .edit()
+            .putString("reply", reply)
+            .apply()
+
+        // Keep the in-memory flow as the fast path when the process survives
         _replyToCommit.tryEmit(reply)
-        
-        // Return to original app (WhatsApp/Messenger)
+
         returnPackage?.let { pkg ->
             Log.d("KeyboardVM", "Returning to: $pkg")
             val intent = context.packageManager.getLaunchIntentForPackage(pkg)

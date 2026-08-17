@@ -1,5 +1,6 @@
 package com.aireplyassistant.presentation.keyboard
 
+import android.content.Context
 import android.inputmethodservice.InputMethodService
 import android.content.Intent
 import android.os.Bundle
@@ -74,7 +75,6 @@ class AIKeyboardService : InputMethodService(), LifecycleOwner, ViewModelStoreOw
     private var viewModel: KeyboardViewModel? = null
     private var currentInputConnection: InputConnection? = null
     private var floatingIndicator: FloatingScanIndicator? = null
-    private var saveChatIndicator: FloatingScanIndicator? = null
     private var pendingReply: String? = null
 
     override fun onCreate() {
@@ -91,22 +91,6 @@ class AIKeyboardService : InputMethodService(), LifecycleOwner, ViewModelStoreOw
             floatingIndicator?.hide()
         }
 
-        saveChatIndicator = FloatingScanIndicator(this, "💾 Save") {
-            lifecycle.coroutineScope.launch {
-                val url = accessibilityRepository.captureBrowserUrl()
-                if (url != null && url.contains("chatgpt.com/c/")) {
-                    chatGptRepository.saveUrl(url)
-                    Toast.makeText(applicationContext, "Chat saved successfully!", Toast.LENGTH_SHORT).show()
-                    saveChatIndicator?.hide()
-                } else {
-                    Toast.makeText(
-                        applicationContext,
-                        "Could not detect chat URL - make sure you've sent at least one message in ChatGPT, then try again",
-                        Toast.LENGTH_LONG
-                    ).show()
-                }
-            }
-        }
     }
 
     private fun observeVisibilityRequests() {
@@ -121,15 +105,6 @@ class AIKeyboardService : InputMethodService(), LifecycleOwner, ViewModelStoreOw
         lifecycle.coroutineScope.launch {
             accessibilityRepository.floatingIndicatorRequests.collect { visible ->
                 if (visible) floatingIndicator?.show() else floatingIndicator?.hide()
-            }
-        }
-        lifecycle.coroutineScope.launch {
-            accessibilityRepository.saveChatOverlayRequests.collect { visible ->
-                if (visible) {
-                    saveChatIndicator?.show()
-                } else {
-                    saveChatIndicator?.hide()
-                }
             }
         }
         lifecycle.coroutineScope.launch {
@@ -205,10 +180,21 @@ class AIKeyboardService : InputMethodService(), LifecycleOwner, ViewModelStoreOw
         currentInputConnection = getCurrentInputConnection()
         if (!restarting) viewModel?.reset()
         viewModel?.setKeyboardMode(KeyboardMode.ALPHA)
-        
-        // Commit pending reply if we just came back from ChatGPT
+
+        // Check persistent storage FIRST - covers the case where this whole
+        // service was killed and recreated while the user was in ChatGPT.
+        val prefs = getSharedPreferences("pending_reply", Context.MODE_PRIVATE)
+        val savedReply = prefs.getString("reply", null)
+        if (savedReply != null) {
+            Log.d("AIKeyboardService", "Committing PERSISTED reply: ${savedReply.take(20)}")
+            inputCharacter(savedReply)
+            prefs.edit().remove("reply").apply()
+            pendingReply = null
+            return
+        }
+
         pendingReply?.let {
-            Log.d("AIKeyboardService", "Committing pending reply: ${it.take(20)}")
+            Log.d("AIKeyboardService", "Committing in-memory pending reply: ${it.take(20)}")
             inputCharacter(it)
             pendingReply = null
         }
@@ -233,7 +219,6 @@ class AIKeyboardService : InputMethodService(), LifecycleOwner, ViewModelStoreOw
         lifecycleRegistry.handleLifecycleEvent(Lifecycle.Event.ON_DESTROY)
         store.clear()
         floatingIndicator?.hide()
-        saveChatIndicator?.hide()
     }
 
     override fun onKeyDown(keyCode: Int, event: KeyEvent?): Boolean {
